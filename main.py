@@ -2,7 +2,7 @@ import time
 import argparse
 import pandas as pd
 from src.utils import Logger, Setting, models_load
-from src.data_preprocess import xgb_data_load, xgb_data_split, xgb_data_loader
+from src.data_preprocess import xgb_data_load, xgb_data_split
 from src.train import train, test
 
 
@@ -32,7 +32,7 @@ def main(args):
     print(f'--------------- {args.model} Train/Valid Split ---------------')
     if args.model in ('XGB, LIGHTGBM, CATBOOST'):
         data = xgb_data_split(args, data)
-        data = xgb_data_loader(args, data)
+        #data = xgb_data_loader(args, data)
         
     # elif args.model in ('FM', 'FFM'):
     #     data = context_data_split(args, data)
@@ -86,10 +86,11 @@ def main(args):
         submission['rating'] = predicts
     else:
         pass
+    
+    submission['rating'] = submission['rating'].apply(lambda x: 1 if x < 1 else (10 if x > 10 else x))
 
     filename = setting.get_submit_filename(args)
     submission.to_csv(filename, index=False)
-
 
 
 if __name__ == "__main__":
@@ -113,7 +114,7 @@ if __name__ == "__main__":
     ############### TRAINING OPTION
     arg('--batch_size', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
     arg('--epochs', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
-    arg('--lr', type=float, default=1e-3, help='Learning Rate를 조정할 수 있습니다.')
+    arg('--lr', type=float, default=1e-1, help='Learning Rate를 조정할 수 있습니다.')
     arg('--loss_fn', type=str, default='RMSE', choices=['MSE', 'RMSE'], help='손실 함수를 변경할 수 있습니다.')
     arg('--optimizer', type=str, default='ADAM', choices=['SGD', 'ADAM'], help='최적화 함수를 변경할 수 있습니다.')
     arg('--weight_decay', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')
@@ -124,11 +125,15 @@ if __name__ == "__main__":
 
 
     ############### XGB OPTION
-    arg('--n_estimators', type=int, default=500, help='XGB 학습 모델 수, 생성 트리 개수 입니다.')
+    arg('--n_estimators', type=int, default=3000, help='XGB 학습 모델 수, 생성 트리 개수 입니다.')
     arg('--max-depth', type=int, default=6, help='최대 트리 탐색 깊이입니다.')
     arg('--gamma', type=int, default=0, help='감마 곡선 정도, 클수록 과적합 방지 효과가 있습니다.')
     arg('--colsample_bytree', type=float, default=0.5, help='max_features 비율을 의미. 피처가 많을 때 과적합 조절을 위해 사용합니다.')
     arg('--random_state', type=int, default=4, help='모델 파라미터 재현을 위한 설정입니다.')
+    
+    
+    ############### CatBoost OPTION
+    arg('--iterations', type=int, default=1500, help='boost계열 모델 업데이트 횟수입니다.')
     
     
     ############### FM, FFM, NCF, WDN, DCN Common OPTION

@@ -5,6 +5,21 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader, Dataset
 
+def age_map(x: int) -> int:
+    x = int(x)
+    if x < 20:
+        return 1
+    elif x >= 20 and x < 30:
+        return 2
+    elif x >= 30 and x < 40:
+        return 3
+    elif x >= 40 and x < 50:
+        return 4
+    elif x >= 50 and x < 60:
+        return 5
+    else:
+        return 6
+
 def process_xgb_data(users, books, ratings1, ratings2):
     """
     Parameters
@@ -45,8 +60,10 @@ def process_xgb_data(users, books, ratings1, ratings2):
     test_df['location_country'] = test_df['location_country'].map(loc_country2idx)
 
     train_df['age'] = train_df['age'].fillna(int(train_df['age'].mean()))
+    train_df['age_category'] = train_df['age'].apply(age_map)
     test_df['age'] = test_df['age'].fillna(int(test_df['age'].mean()))
-
+    test_df['age_category'] = test_df['age'].apply(age_map)
+    
     # book 파트 인덱싱
     category2idx = {v:k for k,v in enumerate(xgb_df['category'].unique())}
     publisher2idx = {v:k for k,v in enumerate(xgb_df['publisher'].unique())}
@@ -153,28 +170,6 @@ def xgb_data_split(args, data):
                                                         shuffle=True
                                                         )
     data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
-    return data
-
-def xgb_data_loader(args, data):
-    """
-    Parameters
-    ----------
-    Args:
-        batch_size : int
-            데이터 batch에 사용할 데이터 사이즈
-        data_shuffle : bool
-            data shuffle 여부
-    ----------
-    """
-
-    train_dataset = TensorDataset(torch.LongTensor(data['X_train'].values), torch.LongTensor(data['y_train'].values))
-    valid_dataset = TensorDataset(torch.LongTensor(data['X_valid'].values), torch.LongTensor(data['y_valid'].values))
-    test_dataset = TensorDataset(torch.LongTensor(data['test'].values))
-
-    train_dataloader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle)
-    valid_dataloader = DataLoader(valid_dataset, batch_size=args.batch_size, shuffle=args.data_shuffle)
-    test_dataloader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False)
-
-    data['train_dataloader'], data['valid_dataloader'], data['test_dataloader'] = train_dataloader, valid_dataloader, test_dataloader
-
+    print(f'train size : x,y: {X_train.shape},{y_train.shape}')
+    print(f'valid size : x,y: {X_valid.shape},{y_valid.shape}')
     return data
