@@ -24,19 +24,30 @@ def train(args, model, dataloader, logger, setting):
     else:
         pass
     
-    if args.optimizer == 'SGD':
-        optimizer = SGD(model.parameters(), lr=args.lr)
-    elif args.optimizer == 'ADAM':
-        optimizer = Adam(model.parameters(), lr=args.lr)
-    else:
-        pass
-    
     if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+        batch = 0
         for idx, data in enumerate(dataloader['train_dataloader']):
-            x, y = data[0].to(args.device), data[1].to(args.device)
-            model.fit(x,y)
+            x, y = data[0], data[1]
+            model.fit(x,y, verbose=True)
+            valid_loss = valid(args, model, dataloader, loss_fn)
+            
+            if minimum_loss > valid_loss:
+                minimum_loss = valid_loss
+                os.makedirs(args.saved_model_path, exist_ok=True)
+                model.save_model(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.json')
+             
+            batch+=1
+            if idx%10 == 0:
+                print(f'Epoch: {idx}, valid_loss: {valid_loss:.3f}')
             
     else:
+        if args.optimizer == 'SGD':
+            optimizer = SGD(model.parameters(), lr=args.lr)
+        elif args.optimizer == 'ADAM':
+            optimizer = Adam(model.parameters(), lr=args.lr)
+        else:
+            pass
+        
         for epoch in tqdm.tqdm(range(args.epochs)):
             model.train()
             total_loss = 0
@@ -77,7 +88,9 @@ def valid(args, model, dataloader, loss_fn):
     batch = 0
 
     for idx, data in enumerate(dataloader['valid_dataloader']):
-        if args.model == 'CNN_FM':
+        if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+            x,y = data[0], data[1]
+        elif args.model == 'CNN_FM':
             x, y = [data['user_isbn_vector'].to(args.device), data['img_vector'].to(args.device)], data['label'].to(args.device)
         elif args.model == 'DeepCoNN':
             x, y = [data['user_isbn_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['label'].to(args.device)
@@ -86,6 +99,7 @@ def valid(args, model, dataloader, loss_fn):
             
         if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
             y_hat = model.predict(x)
+            y_hat = torch.Tensor(y_hat)
         else:
             y_hat = model(x)
             
@@ -98,17 +112,20 @@ def valid(args, model, dataloader, loss_fn):
 def test(args, model, dataloader, setting):
     predicts = list()
     if args.use_best_model == True:
-        model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
-    else:
-        pass
-    
+        if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+            model.load_model(f'./saved_models/{setting.save_time}_{args.model}_model.json')
+        else:
+            model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
+            
     if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
         pass
     else:
         model.eval()
 
     for idx, data in enumerate(dataloader['test_dataloader']):
-        if args.model == 'CNN_FM':
+        if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+            x = data[0]
+        elif args.model == 'CNN_FM':
             x, _ = [data['user_isbn_vector'].to(args.device), data['img_vector'].to(args.device)], data['label'].to(args.device)
         elif args.model == 'DeepCoNN':
             x, _ = [data['user_isbn_vector'].to(args.device), data['user_summary_merge_vector'].to(args.device), data['item_summary_vector'].to(args.device)], data['label'].to(args.device)

@@ -147,8 +147,7 @@ def models_load(args, data):
     '''
 
     if args.model=='XGB':
-        model = XGB(args)
-        pass
+        model = eXtraGredientBoost(args)
     elif args.model=='LIGHTGBM':
         pass
     elif args.model=='CATBOOST':

@@ -1,1 +1,1 @@
-from .XGB import XGB
+from .XGB.XGB_model import eXtraGredientBoost
