@@ -20,7 +20,7 @@ def age_map(x: int) -> int:
     else:
         return 6
 
-def process_xgb_data(users, books, ratings1, ratings2):
+def process_ml_data(users, books, ratings1, ratings2):
     """
     Parameters
     ----------
@@ -43,14 +43,14 @@ def process_xgb_data(users, books, ratings1, ratings2):
     ratings = pd.concat([ratings1, ratings2]).reset_index(drop=True)
 
     # 인덱싱 처리된 데이터 조인
-    xgb_df = ratings.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
+    ml_df = ratings.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
     train_df = ratings1.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
     test_df = ratings2.merge(users, on='user_id', how='left').merge(books[['isbn', 'category', 'publisher', 'language', 'book_author']], on='isbn', how='left')
 
     # 인덱싱 처리
-    loc_city2idx = {v:k for k,v in enumerate(xgb_df['location_city'].unique())}
-    loc_state2idx = {v:k for k,v in enumerate(xgb_df['location_state'].unique())}
-    loc_country2idx = {v:k for k,v in enumerate(xgb_df['location_country'].unique())}
+    loc_city2idx = {v:k for k,v in enumerate(ml_df['location_city'].unique())}
+    loc_state2idx = {v:k for k,v in enumerate(ml_df['location_state'].unique())}
+    loc_country2idx = {v:k for k,v in enumerate(ml_df['location_country'].unique())}
 
     train_df['location_city'] = train_df['location_city'].map(loc_city2idx)
     train_df['location_state'] = train_df['location_state'].map(loc_state2idx)
@@ -65,10 +65,10 @@ def process_xgb_data(users, books, ratings1, ratings2):
     test_df['age_category'] = test_df['age'].apply(age_map)
     
     # book 파트 인덱싱
-    category2idx = {v:k for k,v in enumerate(xgb_df['category'].unique())}
-    publisher2idx = {v:k for k,v in enumerate(xgb_df['publisher'].unique())}
-    language2idx = {v:k for k,v in enumerate(xgb_df['language'].unique())}
-    author2idx = {v:k for k,v in enumerate(xgb_df['book_author'].unique())}
+    category2idx = {v:k for k,v in enumerate(ml_df['category'].unique())}
+    publisher2idx = {v:k for k,v in enumerate(ml_df['publisher'].unique())}
+    language2idx = {v:k for k,v in enumerate(ml_df['language'].unique())}
+    author2idx = {v:k for k,v in enumerate(ml_df['book_author'].unique())}
 
     train_df['category'] = train_df['category'].map(category2idx)
     train_df['publisher'] = train_df['publisher'].map(publisher2idx)
@@ -92,7 +92,7 @@ def process_xgb_data(users, books, ratings1, ratings2):
     return idx, train_df, test_df
 
 
-def xgb_data_load(args):
+def ml_data_load(args):
     """
     Parameters
     ----------
@@ -128,14 +128,14 @@ def xgb_data_load(args):
     test['isbn'] = test['isbn'].map(isbn2idx)
     books['isbn'] = books['isbn'].map(isbn2idx)
 
-    idx, xgb_train, xgb_test = process_xgb_data(users, books, train, test)
+    idx, ml_train, ml_test = process_ml_data(users, books, train, test)
     field_dims = np.array([len(user2idx), len(isbn2idx),
                             6, len(idx['loc_city2idx']), len(idx['loc_state2idx']), len(idx['loc_country2idx']),
                             len(idx['category2idx']), len(idx['publisher2idx']), len(idx['language2idx']), len(idx['author2idx'])], dtype=np.uint32)
 
     data = {
-            'train':xgb_train,
-            'test':xgb_test.drop(['rating'], axis=1),
+            'train':ml_train,
+            'test':ml_test.drop(['rating'], axis=1),
             'field_dims':field_dims,
             'users':users,
             'books':books,
@@ -150,7 +150,7 @@ def xgb_data_load(args):
     return data
 
 
-def xgb_data_split(args, data):
+def ml_data_split(args, data):
     """
     Parameters
     ----------

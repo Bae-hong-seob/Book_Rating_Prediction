@@ -151,7 +151,7 @@ def models_load(args, data):
     elif args.model=='LIGHTGBM':
         pass
     elif args.model=='CATBOOST':
-        pass
+        model = CatBoost(args)
     
     # elif args.model=='FM':
     #     model = FactorizationMachineModel(args, data).to(args.device)

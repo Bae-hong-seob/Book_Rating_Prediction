@@ -26,7 +26,7 @@ def train(args, model, dataloader, logger, setting):
     
     if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
         x, y = dataloader['X_train'], dataloader['y_train']
-        model.fit(x,y, eval_set=[(dataloader['X_valid'], dataloader['y_valid'])])
+        model.fit(x,y, eval_set=[(dataloader['X_valid'], dataloader['y_valid'])], early_stopping_rounds=100)
         valid_loss = valid(args, model, dataloader, loss_fn)
         
         if minimum_loss > valid_loss:

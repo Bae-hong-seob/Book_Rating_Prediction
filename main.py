@@ -2,7 +2,7 @@ import time
 import argparse
 import pandas as pd
 from src.utils import Logger, Setting, models_load
-from src.data_preprocess import xgb_data_load, xgb_data_split
+from src.data_preprocess import ml_data_load, ml_data_split
 from src.train import train, test
 
 
@@ -13,7 +13,7 @@ def main(args):
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
     if args.model in ('XGB, LIGHTGBM, CATBOOST'):
-        data = xgb_data_load(args)
+        data = ml_data_load(args)
     # elif args.model in ('FM', 'FFM'):
     #     data = context_data_load(args)
     # elif args.model in ('NCF', 'WDN', 'DCN'):
@@ -31,7 +31,7 @@ def main(args):
     ######################## Train/Valid Split
     print(f'--------------- {args.model} Train/Valid Split ---------------')
     if args.model in ('XGB, LIGHTGBM, CATBOOST'):
-        data = xgb_data_split(args, data)
+        data = ml_data_split(args, data)
         #data = xgb_data_loader(args, data)
         
     # elif args.model in ('FM', 'FFM'):
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     ############### TRAINING OPTION
     arg('--batch_size', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
     arg('--epochs', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
-    arg('--lr', type=float, default=1e-1, help='Learning Rate를 조정할 수 있습니다.')
+    arg('--lr', type=float, default=0.1, help='Learning Rate를 조정할 수 있습니다.')
     arg('--loss_fn', type=str, default='RMSE', choices=['MSE', 'RMSE'], help='손실 함수를 변경할 수 있습니다.')
     arg('--optimizer', type=str, default='ADAM', choices=['SGD', 'ADAM'], help='최적화 함수를 변경할 수 있습니다.')
     arg('--weight_decay', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')
@@ -133,7 +133,8 @@ if __name__ == "__main__":
     
     
     ############### CatBoost OPTION
-    arg('--iterations', type=int, default=1500, help='boost계열 모델 업데이트 횟수입니다.')
+    arg('--iterations', type=int, default=5000, help='boost계열 모델 업데이트 횟수입니다.')
+    arg('--l2_leaf_reg', type=int, default=5, help='가중치에 대한 L2 정규화 용어입니다. 큰 가중치에 불이익을 주어 과적합을 방지하는 데 도움이 됩니다.')
     
     
     ############### FM, FFM, NCF, WDN, DCN Common OPTION
