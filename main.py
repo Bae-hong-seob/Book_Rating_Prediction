@@ -5,7 +5,8 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from src.utils import Logger, Setting, models_load
-from src.data_preprocess import ml_data_load, ml_data_split
+from src.data_preprocess.ml_data import ml_data_load, ml_data_split
+from src.data_preprocess.dl_data import dl_data_load, dl_data_split
 from src.train import train, test
 
 
@@ -17,6 +18,8 @@ def main(args):
     print(f'--------------- {args.model} Load Data ---------------')
     if args.model in ('XGB, LIGHTGBM, CATBOOST'):
         data = ml_data_load(args)
+        #data = dl_data_load(args)
+        
     # elif args.model in ('FM', 'FFM'):
     #     data = context_data_load(args)
     # elif args.model in ('NCF', 'WDN', 'DCN'):
@@ -35,6 +38,8 @@ def main(args):
     print(f'--------------- {args.model} Train/Valid Split ---------------')
     if args.model in ('XGB, LIGHTGBM, CATBOOST'):
         data = ml_data_split(args, data)
+        #data = dl_data_split(args, data)
+        
         #data = xgb_data_loader(args, data)
         
     # elif args.model in ('FM', 'FFM'):

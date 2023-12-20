@@ -40,6 +40,7 @@ def mean_std_var(data: dict) -> dict:
     data['field_dims'] = np.append(data['field_dims'], new_fields)
 
     return data
+
 def process_ml_data(users, books, ratings1, ratings2):
     """
     Parameters
@@ -166,7 +167,8 @@ def ml_data_load(args):
             'isbn2idx':isbn2idx,
             }
 
-    data = mean_std_var(data)
+    #data = mean_std_var(data)
+    
     return data
 
 
