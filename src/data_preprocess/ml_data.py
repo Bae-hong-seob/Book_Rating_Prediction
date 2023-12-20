@@ -20,6 +20,26 @@ def age_map(x: int) -> int:
     else:
         return 6
 
+def mean_std_var(data: dict) -> dict:
+    data['train']['mean'] = data['train'].groupby('user_id')['rating'].transform('mean')
+    data['train']['var'] = data['train'].groupby('user_id')['rating'].transform('var')
+    data['train']['std'] = data['train'].groupby('user_id')['rating'].transform('std')
+    
+		# test에서 NaN 값으로 채운 경우 valid loss는 더 낮았지만 test loss는 오히려 높았음. 
+    temp = data['train'].drop_duplicates('user_id')[['user_id', 'mean', 'var', 'std']]
+    data['test'] = pd.merge(data['test'], temp, how='left', on='user_id')
+    
+		# unique 혹은 dropna 중 고르기 
+		# baseline FM에서는 dropna가 validation에서 더 나은 성능을 보임
+    new_fields = (
+        len(data['train']['mean'].dropna()),
+        len(data['train']['var'].dropna()),
+        len(data['train']['std'].dropna())
+        )
+        
+    data['field_dims'] = np.append(data['field_dims'], new_fields)
+
+    return data
 def process_ml_data(users, books, ratings1, ratings2):
     """
     Parameters
@@ -146,7 +166,7 @@ def ml_data_load(args):
             'isbn2idx':isbn2idx,
             }
 
-
+    data = mean_std_var(data)
     return data
 
 

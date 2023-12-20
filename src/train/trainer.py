@@ -1,7 +1,9 @@
 import os
 import tqdm
+import pickle
 import torch
 import torch.nn as nn
+import lightgbm as lgb
 from torch.nn import MSELoss
 from torch.optim import SGD, Adam
 
@@ -14,6 +16,55 @@ class RMSELoss(nn.Module):
         criterion = MSELoss()
         loss = torch.sqrt(criterion(x, y)+self.eps)
         return loss
+
+import optuna
+import numpy as np
+from optuna.integration import LightGBMPruningCallback
+from sklearn.model_selection import StratifiedKFold
+
+def objective(trial, args, dataloader, model, setting):
+    param_grid = {
+        #"device_type": trial.suggest_categorical("device_type", ['gpu']),
+        "n_estimators": trial.suggest_categorical("n_estimators", [10000]),
+        "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.3),
+        "num_leaves": trial.suggest_int("num_leaves", 20, 3000, step=20),
+        "max_depth": trial.suggest_int("max_depth", 3, 12),
+        "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 200, 10000, step=100),
+        "lambda_l1": trial.suggest_int("lambda_l1", 0, 100, step=5),
+        "lambda_l2": trial.suggest_int("lambda_l2", 0, 100, step=5),
+        "min_gain_to_split": trial.suggest_float("min_gain_to_split", 0, 15),
+        "bagging_fraction": trial.suggest_float(
+            "bagging_fraction", 0.2, 0.95, step=0.1
+        ),
+        "bagging_freq": trial.suggest_categorical("bagging_freq", [1]),
+        "feature_fraction": trial.suggest_float(
+            "feature_fraction", 0.2, 0.95, step=0.1
+        ),
+    }
+    
+    X_train, X_test = dataloader['X_train'], dataloader['X_valid']
+    y_train, y_test = dataloader['y_train'], dataloader['y_valid']
+    
+    model = lgb.LGBMRegressor(objective='mse', **param_grid)
+    model.fit(
+        X_train,
+        y_train,
+        eval_set=[(X_test, y_test)],
+        eval_metric="rmse",
+        callbacks=[
+            LightGBMPruningCallback(trial, "rmse")
+        ],  # Add a pruning callback
+    )
+    
+    with open(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pkl', 'wb') as f:
+        pickle.dump(model, f)
+        
+    y_hat = model.predict(X_test)
+    y, y_hat = torch.Tensor(y_test), torch.Tensor(y_hat)
+    loss_fn = RMSELoss()
+    loss = loss_fn(y, y_hat)
+
+    return loss
     
 def train(args, model, dataloader, logger, setting):
     minimum_loss = 999999999
@@ -24,9 +75,9 @@ def train(args, model, dataloader, logger, setting):
     else:
         pass
     
-    if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+    if args.model in ('XGB', 'CATBOOST'):
         x, y = dataloader['X_train'], dataloader['y_train']
-        model.fit(x,y, eval_set=[(dataloader['X_valid'], dataloader['y_valid'])], early_stopping_rounds=100)
+        model.fit(x,y, eval_set=[(dataloader['X_valid'], dataloader['y_valid'])])
         valid_loss = valid(args, model, dataloader, loss_fn)
         
         if minimum_loss > valid_loss:
@@ -35,7 +86,32 @@ def train(args, model, dataloader, logger, setting):
             model.save_model(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.json')
                 
         print(f'valid_loss: {valid_loss:.3f}')
+        
+    elif args.model in ('LIGHTGBM'):
+        if args.optuna == True:
+            study = optuna.create_study(direction='minimize', study_name='LGBM Regressor')
+            func = lambda trial : objective(trial, args, dataloader, model, setting)
+            study.optimize(func, n_trials=20)
             
+            print(f"\tBest value (rmse): {study.best_value:.5f}")
+            print(f"\tBest params:")
+
+            for key, value in study.best_params.items():
+                print(f"\t\t{key}: {value}")
+                
+        else:
+            x, y = dataloader['X_train'], dataloader['y_train']
+            model.fit(x,y, eval_set=[(dataloader['X_valid'], dataloader['y_valid'])], eval_metric='rmse')
+            valid_loss = valid(args, model, dataloader, loss_fn)
+            
+            if minimum_loss > valid_loss:
+                minimum_loss = valid_loss
+                os.makedirs(args.saved_model_path, exist_ok=True)
+                with open(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pkl', 'wb') as f:
+                    pickle.dump(model, f)
+                    
+            print(f'valid_loss: {valid_loss:.3f}')
+        
     else:
         if args.optimizer == 'SGD':
             optimizer = SGD(model.parameters(), lr=args.lr)
@@ -111,8 +187,17 @@ def valid(args, model, dataloader, loss_fn):
 def test(args, model, dataloader, setting):
     predicts = list()
     if args.use_best_model == True:
-        if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
+        if args.model in ('XGB', 'CATBOOST'):
             model.load_model(f'./saved_models/{setting.save_time}_{args.model}_model.json')
+            
+        elif args.model in ('LIGHTGBM'):
+            if args.optuna==True:
+                with open(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pkl', 'rb') as f:
+                    model = pickle.load(f)
+            else:
+                with open(f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pkl', 'rb') as f:
+                    model = pickle.load(f)
+                
         else:
             model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
             

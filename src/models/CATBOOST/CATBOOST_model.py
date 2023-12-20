@@ -5,5 +5,6 @@ def CatBoost(args):
                              verbose=100,
                              iterations=args.iterations,
                              learning_rate=args.lr,
+                             early_stopping_rounds=args.early_stopping_rounds,
                              eval_metric='RMSE',
                              l2_leaf_reg=args.l2_leaf_reg)

@@ -1,6 +1,9 @@
 import time
 import argparse
 import pandas as pd
+import warnings
+warnings.filterwarnings("ignore")
+
 from src.utils import Logger, Setting, models_load
 from src.data_preprocess import ml_data_load, ml_data_split
 from src.train import train, test
@@ -91,6 +94,7 @@ def main(args):
 
     filename = setting.get_submit_filename(args)
     submission.to_csv(filename, index=False)
+    print('make csv file ... ', filename)
 
 
 if __name__ == "__main__":
@@ -118,6 +122,7 @@ if __name__ == "__main__":
     arg('--loss_fn', type=str, default='RMSE', choices=['MSE', 'RMSE'], help='손실 함수를 변경할 수 있습니다.')
     arg('--optimizer', type=str, default='ADAM', choices=['SGD', 'ADAM'], help='최적화 함수를 변경할 수 있습니다.')
     arg('--weight_decay', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')
+    arg('--optuna', type=bool, default=False, help='하이퍼 파라미터 자동 최적화 설정입니다.')
 
 
     ############### GPU
@@ -126,10 +131,18 @@ if __name__ == "__main__":
 
     ############### XGB OPTION
     arg('--n_estimators', type=int, default=3000, help='XGB 학습 모델 수, 생성 트리 개수 입니다.')
-    arg('--max-depth', type=int, default=6, help='최대 트리 탐색 깊이입니다.')
+    arg('--max_depth', type=int, default=6, help='최대 트리 탐색 깊이입니다.')
     arg('--gamma', type=int, default=0, help='감마 곡선 정도, 클수록 과적합 방지 효과가 있습니다.')
     arg('--colsample_bytree', type=float, default=0.5, help='max_features 비율을 의미. 피처가 많을 때 과적합 조절을 위해 사용합니다.')
     arg('--random_state', type=int, default=4, help='모델 파라미터 재현을 위한 설정입니다.')
+    arg('--early_stopping_rounds', type=int, default=100, help='early stop size 설정입니다.')
+    
+    
+    ############### LightGBM OPTION
+    arg('--num_iterations', type=int, default=10000, help='전체 트리 반복 학습 횟수')
+    arg('--num_leaves', type=int, default=10, help='전체 트리의 leave 수')
+    arg('--lightgbm_max_depth', type=int, default=-1, help='최대 트리 탐색 깊이입니다.')
+    
     
     
     ############### CatBoost OPTION
