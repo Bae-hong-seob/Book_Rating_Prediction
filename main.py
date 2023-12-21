@@ -1,6 +1,7 @@
 import time
 import argparse
 import pandas as pd
+import torch
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -87,7 +88,11 @@ def main(args):
     ######################## Model
     print(f'--------------- INIT {args.model} ---------------')
     if args.model=='Multi':
-        model = multi_load(args,context_data,image_data,text_data)
+        Autoint_model = torch.load('/data/ephemeral/home/Book_Rating_Prediction/saved_models/20231220_200029_AutoInt_model.pt')
+        CNN_FM_model = torch.load('/data/ephemeral/home/Book_Rating_Prediction/saved_models/20231221_041454_CNN_FM_model.pt')
+        DeepCoNN_model = torch.load('/data/ephemeral/home/Book_Rating_Prediction/saved_models/20231221_052629_DeepCoNN_model.pt')
+        
+        model = multi_load(args, context_data,image_data,text_data)
     else:
         model = models_load(args,data)
 
@@ -95,7 +100,7 @@ def main(args):
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
     if args.model=='Multi':
-        model = multi_train(args, model, context_data, image_data, text_data, logger, setting)
+        model = multi_train(args, model, Autoint_model, context_data, CNN_FM_model, image_data, DeepCoNN_model, text_data, logger, setting)
     else:
         model = train(args, model, data, logger, setting)
 
@@ -103,7 +108,7 @@ def main(args):
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
     if args.model=='Multi':
-        predicts = multi_test(args, model, context_data, image_data, text_data, logger, setting)
+        predicts = multi_test(args, model, Autoint_model, context_data, CNN_FM_model, image_data, DeepCoNN_model, text_data, setting)
     else:
         predicts = test(args, model, data, setting)
 
@@ -135,7 +140,7 @@ if __name__ == "__main__":
     ############### BASIC OPTION
     arg('--data_path', type=str, default='data/', help='Data path를 설정할 수 있습니다.')
     arg('--saved_model_path', type=str, default='./saved_models', help='Saved Model path를 설정할 수 있습니다.')
-    arg('--model', type=str, choices=['XGB', 'LIGHTGBM','CATBOOST','FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'],
+    arg('--model', type=str, choices=['XGB', 'LIGHTGBM','CATBOOST','FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'Multi'],
                                 help='학습 및 예측할 모델을 선택할 수 있습니다.')
     arg('--data_shuffle', type=bool, default=True, help='데이터 셔플 여부를 조정할 수 있습니다.')
     arg('--test_size', type=float, default=0.2, help='Train/Valid split 비율을 조정할 수 있습니다.')
@@ -145,8 +150,8 @@ if __name__ == "__main__":
 
     ############### TRAINING OPTION
     arg('--batch_size', type=int, default=1024, help='Batch size를 조정할 수 있습니다.')
-    arg('--epochs', type=int, default=10, help='Epoch 수를 조정할 수 있습니다.')
-    arg('--lr', type=float, default=0.1, help='Learning Rate를 조정할 수 있습니다.')
+    arg('--epochs', type=int, default=30, help='Epoch 수를 조정할 수 있습니다.')
+    arg('--lr', type=float, default=0.003, help='Learning Rate를 조정할 수 있습니다.')
     arg('--loss_fn', type=str, default='RMSE', choices=['MSE', 'RMSE'], help='손실 함수를 변경할 수 있습니다.')
     arg('--optimizer', type=str, default='ADAM', choices=['SGD', 'ADAM'], help='최적화 함수를 변경할 수 있습니다.')
     arg('--weight_decay', type=float, default=1e-6, help='Adam optimizer에서 정규화에 사용하는 값을 조정할 수 있습니다.')

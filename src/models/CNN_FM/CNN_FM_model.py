@@ -74,4 +74,4 @@ class CNN_FM(torch.nn.Module):
                                     img_feature
                                     ], dim=1)
         output = self.fm(feature_vector)
-        return output.squeeze(1)
+        return output.squeeze(1), feature_vector

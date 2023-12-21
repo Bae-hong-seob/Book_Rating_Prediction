@@ -52,8 +52,6 @@ class AutoInt(nn.Module):
         out = torch.sum(out, dim=1)
         _out = self.prediction_layer(out)
         self.i += 1
-        with open(f'./embeddings/AutoInt_embeddings.pkl', 'wb') as f:
-            pickle.dump(out.detach().cpu().numpy(), f, protocol=pickle.HIGHEST_PROTOCOL)
-
+        
         return _out.squeeze(1), out
     

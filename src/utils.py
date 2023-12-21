@@ -138,7 +138,7 @@ class Logger:
 
 def multi_load(args, context_data,image_data,text_data):
     if args.model=='Multi':
-        model = Multi(args, context_data, image_data, text_data).to(args.device)
+        model = Multi(context_data, image_data, text_data).to(args.device)
     return model
         
 def models_load(args, data):

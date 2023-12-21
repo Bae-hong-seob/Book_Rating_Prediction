@@ -66,7 +66,7 @@ def objective(trial, args, dataloader, model, setting):
 
     return loss
 
-def multi_train(args, model, context_dataloader, image_dataloader, text_dataloader, logger, setting):
+def multi_train(args, model, Autoint_model, context_dataloader, CNN_FM_model, image_dataloader, DeepCoNN_model, text_dataloader, logger, setting):
     minimum_loss = 999999999
     if args.loss_fn == 'MSE':
         loss_fn = MSELoss()
@@ -80,7 +80,11 @@ def multi_train(args, model, context_dataloader, image_dataloader, text_dataload
         optimizer = Adam(model.parameters(), lr=args.lr)
     else:
         pass
-
+    
+    
+    Autoint_model.eval()
+    CNN_FM_model.eval()
+    DeepCoNN_model.eval()
     for epoch in tqdm.tqdm(range(args.epochs)):
         model.train()
         total_loss = 0
@@ -91,15 +95,20 @@ def multi_train(args, model, context_dataloader, image_dataloader, text_dataload
             image_x, image_y = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
             text_x, text_y = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
             
-            y_hat = model(context_x, image_x, text_x)
+            _, autoint_data, = Autoint_model(context_x)
+            _, cnn_fm_data, = CNN_FM_model(image_x)
+            _, deepconn_data = DeepCoNN_model(text_x)
+
+            y_hat = model(torch.Tensor(autoint_data), torch.Tensor(cnn_fm_data), torch.Tensor(deepconn_data))
             loss = loss_fn(context_y.float(), y_hat)
+            
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
             batch +=1
             
-        valid_loss = valid(args, model, context_dataloader, image_dataloader, text_dataloader, loss_fn)
+        valid_loss = multi_valid(args, model, Autoint_model, context_dataloader, CNN_FM_model, image_dataloader, DeepCoNN_model, text_dataloader, loss_fn)
         print(f'Epoch: {epoch+1}, Train_loss: {total_loss/batch:.3f}, valid_loss: {valid_loss:.3f}')
         logger.log(epoch=epoch+1, train_loss=total_loss/batch, valid_loss=valid_loss)
         if minimum_loss > valid_loss:
@@ -108,6 +117,57 @@ def multi_train(args, model, context_dataloader, image_dataloader, text_dataload
             torch.save(model.state_dict(), f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pt')
     logger.close()
     return model
+
+
+def multi_valid(args, model, Autoint_model, context_dataloader, CNN_FM_model, image_dataloader, DeepCoNN_model, text_dataloader, loss_fn):
+    model.eval()
+    total_loss = 0
+    batch = 0
+
+    Autoint_model.eval(), CNN_FM_model.eval(), DeepCoNN_model.eval()
+    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['valid_dataloader'],image_dataloader['valid_dataloader'],text_dataloader['valid_dataloader'])):
+        context_x, context_y = context_data[0].to(args.device), context_data[1].to(args.device)
+        image_x, image_y = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
+        text_x, text_y = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
+
+        _, autoint_data, = Autoint_model(context_x)
+        _, cnn_fm_data, = CNN_FM_model(image_x)
+        _, deepconn_data = DeepCoNN_model(text_x)
+        
+        y_hat = model(autoint_data, cnn_fm_data, deepconn_data)
+        loss = loss_fn(context_y.float(), y_hat)
+        total_loss += loss.item()
+        batch +=1
+    valid_loss = total_loss/batch
+    return valid_loss
+
+def multi_test(args, model, Autoint_model, context_dataloader, CNN_FM_model, image_dataloader, DeepCoNN_model, text_dataloader, setting):
+    predicts = list()
+    if args.use_best_model == True:
+        model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
+    else:
+        pass
+    
+    
+    Autoint_model.eval(), CNN_FM_model.eval(), DeepCoNN_model.eval()
+    model.eval()
+    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['test_dataloader'],image_dataloader['test_dataloader'],text_dataloader['test_dataloader'])):
+        context_x = context_data[0].to(args.device), context_data[1].to(args.device)
+        image_x, _ = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
+        text_x, _ = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
+        
+        _, autoint_data, = Autoint_model(context_x)
+        _, cnn_fm_data, = CNN_FM_model(image_x)
+        _, deepconn_data = DeepCoNN_model(text_x)
+        
+        y_hat = model(autoint_data, cnn_fm_data, deepconn_data)
+        predicts.extend(y_hat.tolist())
+    return predicts
+
+
+
+
+
 
 def train(args, model, dataloader, logger, setting):
     minimum_loss = 999999999
@@ -227,23 +287,6 @@ def valid(args, model, dataloader, loss_fn):
         
     return valid_loss
 
-def multi_valid(args, model, context_dataloader, image_dataloader, text_dataloader, loss_fn):
-    model.eval()
-    total_loss = 0
-    batch = 0
-
-    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['valid_dataloader'],image_dataloader['valid_dataloader'],text_dataloader['valid_dataloader'])):
-        context_x, context_y = context_data[0].to(args.device), context_data[1].to(args.device)
-        image_x, image_y = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
-        text_x, text_y = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
-        
-        y_hat = model(context_x, image_x, text_x)
-        loss = loss_fn(context_y.float(), y_hat)
-        total_loss += loss.item()
-        batch +=1
-    valid_loss = total_loss/batch
-    return valid_loss
-
 def test(args, model, dataloader, setting):
     predicts = list()
     if args.use_best_model == True:
@@ -283,18 +326,3 @@ def test(args, model, dataloader, setting):
         
     return predicts
 
-def multi_test(args, model, context_dataloader, image_dataloader, text_dataloader, setting):
-    predicts = list()
-    if args.use_best_model == True:
-        model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
-    else:
-        pass
-    model.eval()
-    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['test_dataloader'],image_dataloader['test_dataloader'],text_dataloader['test_dataloader'])):
-        context_x = context_data[0].to(args.device), context_data[1].to(args.device)
-        image_x, _ = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
-        text_x, _ = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
-            
-        y_hat = model(context_x, image_x, text_x)
-        predicts.extend(y_hat.tolist())
-    return predicts
