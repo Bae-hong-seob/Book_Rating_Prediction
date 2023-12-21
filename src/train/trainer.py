@@ -152,7 +152,7 @@ def multi_test(args, model, Autoint_model, context_dataloader, CNN_FM_model, ima
     Autoint_model.eval(), CNN_FM_model.eval(), DeepCoNN_model.eval()
     model.eval()
     for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['test_dataloader'],image_dataloader['test_dataloader'],text_dataloader['test_dataloader'])):
-        context_x = context_data[0].to(args.device), context_data[1].to(args.device)
+        context_x = context_data[0].to(args.device)
         image_x, _ = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
         text_x, _ = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
         
