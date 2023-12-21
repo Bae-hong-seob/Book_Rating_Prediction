@@ -55,11 +55,31 @@ def process_ml_data(users, books, ratings1, ratings2):
         test 데이터의 rating
     ----------
     """
+    users['location'] = users['location'].str.replace(r'[^0-9a-zA-Z:,]', '', regex=True) # 특수문자 제거
+    users = users.replace('na', np.nan) #특수문자 제거로 n/a가 na로 바뀌게 되었습니다. 따라서 이를 컴퓨터가 인식할 수 있는 결측값으로 변환합니다.
+    users = users.replace('', np.nan) # 일부 경우 , , ,으로 입력된 경우가 있었으므로 이런 경우에도 결측값으로 변환합니다.
 
     users['location_city'] = users['location'].apply(lambda x: x.split(',')[0])
     users['location_state'] = users['location'].apply(lambda x: x.split(',')[1])
     users['location_country'] = users['location'].apply(lambda x: x.split(',')[2])
     users = users.drop(['location'], axis=1)
+    
+    # print('----start books preprocess ...')
+    # print('before publichser preprocess : ',books['publisher'].nunique()) # 수정전 항목 수를 확인합니다.
+    
+    # publisher_dict=(books['publisher'].value_counts()).to_dict()
+    # publisher_count_df= pd.DataFrame(list(publisher_dict.items()),columns = ['publisher','count'])
+    # publisher_count_df = publisher_count_df.sort_values(by=['count'], ascending = False)
+    # modify_list = publisher_count_df[publisher_count_df['count']>1].publisher.values
+    # print(len(modify_list))
+    # for publisher in modify_list:
+    #     try:
+    #         number = books[books['publisher']==publisher]['isbn'].apply(lambda x: x[:4]).value_counts().index[0]
+    #         right_publisher = books[books['isbn'].apply(lambda x: x[:4])==number]['publisher'].value_counts().index[0]
+    #         books.loc[books[books['isbn'].apply(lambda x: x[:4])==number].index,'publisher'] = right_publisher
+    #     except:
+    #         pass
+    # print('after publichser preprocess : ',books['publisher'].nunique()) # 수정전 항목 수를 확인합니다.
 
     ratings = pd.concat([ratings1, ratings2]).reset_index(drop=True)
 
@@ -166,8 +186,6 @@ def ml_data_load(args):
             'user2idx':user2idx,
             'isbn2idx':isbn2idx,
             }
-
-    #data = mean_std_var(data)
     
     return data
 
@@ -191,6 +209,14 @@ def ml_data_split(args, data):
                                                         random_state=args.seed,
                                                         shuffle=True
                                                         )
+    X_train = X_train.dropna()
+    common_indices = X_train.index.intersection(y_train.index)
+    y_train = y_train.loc[common_indices]
+    print(X_train.head())
+    print(y_train)
+    y_train = np.float64(y_train)
+
+    
     data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
     print(f'train size : x,y: {X_train.shape},{y_train.shape}')
     print(f'valid size : x,y: {X_valid.shape},{y_valid.shape}')

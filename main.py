@@ -4,10 +4,13 @@ import pandas as pd
 import warnings
 warnings.filterwarnings("ignore")
 
-from src.utils import Logger, Setting, models_load
+from src.utils import Logger, Setting, models_load, multi_load
 from src.data_preprocess.ml_data import ml_data_load, ml_data_split
-from src.data_preprocess.dl_data import dl_data_load, dl_data_split
-from src.train import train, test
+from src.data_preprocess import context_data_load, context_data_split, context_data_loader
+from src.data_preprocess import image_data_load, image_data_split, image_data_loader
+from src.data_preprocess import text_data_load, text_data_split, text_data_loader
+
+from src.train import train, test, multi_train, multi_test
 
 
 def main(args):
@@ -16,9 +19,15 @@ def main(args):
 
     ######################## DATA LOAD
     print(f'--------------- {args.model} Load Data ---------------')
-    if args.model in ('XGB, LIGHTGBM, CATBOOST'):
+    if args.model == 'Multi':
+        context_data = context_data_load(args)
+        image_data = image_data_load(args)
+        import nltk
+        nltk.download('punkt')
+        text_data = text_data_load(args)
+        
+    elif args.model in ('XGB, LIGHTGBM, CATBOOST'):
         data = ml_data_load(args)
-        #data = dl_data_load(args)
         
     # elif args.model in ('FM', 'FFM'):
     #     data = context_data_load(args)
@@ -36,12 +45,17 @@ def main(args):
 
     ######################## Train/Valid Split
     print(f'--------------- {args.model} Train/Valid Split ---------------')
-    if args.model in ('XGB, LIGHTGBM, CATBOOST'):
+    if args.model=='Multi':
+        context_data = context_data_split(args, context_data)
+        context_data = context_data_loader(args, context_data)
+        image_data = image_data_split(args, image_data)
+        image_data = image_data_loader(args, image_data)
+        text_data = text_data_split(args, text_data)
+        text_data = text_data_loader(args, text_data)
+        
+    elif args.model in ('XGB, LIGHTGBM, CATBOOST'):
         data = ml_data_split(args, data)
-        #data = dl_data_split(args, data)
-        
-        #data = xgb_data_loader(args, data)
-        
+                
     # elif args.model in ('FM', 'FFM'):
     #     data = context_data_split(args, data)
     #     data = context_data_loader(args, data)
@@ -72,17 +86,26 @@ def main(args):
 
     ######################## Model
     print(f'--------------- INIT {args.model} ---------------')
-    model = models_load(args,data)
+    if args.model=='Multi':
+        model = multi_load(args,context_data,image_data,text_data)
+    else:
+        model = models_load(args,data)
 
 
     ######################## TRAIN
     print(f'--------------- {args.model} TRAINING ---------------')
-    model = train(args, model, data, logger, setting)
+    if args.model=='Multi':
+        model = multi_train(args, model, context_data, image_data, text_data, logger, setting)
+    else:
+        model = train(args, model, data, logger, setting)
 
 
     ######################## INFERENCE
     print(f'--------------- {args.model} PREDICT ---------------')
-    predicts = test(args, model, data, setting)
+    if args.model=='Multi':
+        predicts = multi_test(args, model, context_data, image_data, text_data, logger, setting)
+    else:
+        predicts = test(args, model, data, setting)
 
 
     ######################## SAVE PREDICT
@@ -90,7 +113,7 @@ def main(args):
     submission = pd.read_csv(args.data_path + 'sample_submission.csv')
     if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
         submission['rating'] = predicts
-    elif args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN'):
+    elif args.model in ('FM', 'FFM', 'NCF', 'WDN', 'DCN', 'CNN_FM', 'DeepCoNN', 'Multi'):
         submission['rating'] = predicts
     else:
         pass
@@ -145,7 +168,7 @@ if __name__ == "__main__":
     
     ############### LightGBM OPTION
     arg('--num_iterations', type=int, default=10000, help='전체 트리 반복 학습 횟수')
-    arg('--num_leaves', type=int, default=10, help='전체 트리의 leave 수')
+    arg('--num_leaves', type=int, default=1000, help='전체 트리의 leave 수')
     arg('--lightgbm_max_depth', type=int, default=-1, help='최대 트리 탐색 깊이입니다.')
     
     

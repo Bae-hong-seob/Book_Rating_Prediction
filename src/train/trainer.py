@@ -65,7 +65,50 @@ def objective(trial, args, dataloader, model, setting):
     loss = loss_fn(y, y_hat)
 
     return loss
-    
+
+def multi_train(args, model, context_dataloader, image_dataloader, text_dataloader, logger, setting):
+    minimum_loss = 999999999
+    if args.loss_fn == 'MSE':
+        loss_fn = MSELoss()
+    elif args.loss_fn == 'RMSE':
+        loss_fn = RMSELoss()
+    else:
+        pass
+    if args.optimizer == 'SGD':
+        optimizer = SGD(model.parameters(), lr=args.lr)
+    elif args.optimizer == 'ADAM':
+        optimizer = Adam(model.parameters(), lr=args.lr)
+    else:
+        pass
+
+    for epoch in tqdm.tqdm(range(args.epochs)):
+        model.train()
+        total_loss = 0
+        batch = 0
+
+        for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['train_dataloader'],image_dataloader['train_dataloader'],text_dataloader['train_dataloader'])):
+            context_x, context_y = context_data[0].to(args.device), context_data[1].to(args.device)
+            image_x, image_y = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
+            text_x, text_y = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
+            
+            y_hat = model(context_x, image_x, text_x)
+            loss = loss_fn(context_y.float(), y_hat)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            batch +=1
+            
+        valid_loss = valid(args, model, context_dataloader, image_dataloader, text_dataloader, loss_fn)
+        print(f'Epoch: {epoch+1}, Train_loss: {total_loss/batch:.3f}, valid_loss: {valid_loss:.3f}')
+        logger.log(epoch=epoch+1, train_loss=total_loss/batch, valid_loss=valid_loss)
+        if minimum_loss > valid_loss:
+            minimum_loss = valid_loss
+            os.makedirs(args.saved_model_path, exist_ok=True)
+            torch.save(model.state_dict(), f'{args.saved_model_path}/{setting.save_time}_{args.model}_model.pt')
+    logger.close()
+    return model
+
 def train(args, model, dataloader, logger, setting):
     minimum_loss = 999999999
     if args.loss_fn == 'MSE':
@@ -154,7 +197,7 @@ def valid(args, model, dataloader, loss_fn):
     if args.model in ('XGB', 'LIGHTGBM', 'CATBOOST'):
         x,y = dataloader['X_valid'], dataloader['y_valid']
         y_hat = model.predict(x)
-        y, y_hat = torch.Tensor(y), torch.Tensor(y_hat)
+        y, y_hat = torch.Tensor(y.values), torch.Tensor(y_hat)
         loss = loss_fn(y, y_hat)
         valid_loss = loss
         
@@ -182,6 +225,23 @@ def valid(args, model, dataloader, loss_fn):
             batch +=1
         valid_loss = total_loss/batch
         
+    return valid_loss
+
+def multi_valid(args, model, context_dataloader, image_dataloader, text_dataloader, loss_fn):
+    model.eval()
+    total_loss = 0
+    batch = 0
+
+    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['valid_dataloader'],image_dataloader['valid_dataloader'],text_dataloader['valid_dataloader'])):
+        context_x, context_y = context_data[0].to(args.device), context_data[1].to(args.device)
+        image_x, image_y = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
+        text_x, text_y = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
+        
+        y_hat = model(context_x, image_x, text_x)
+        loss = loss_fn(context_y.float(), y_hat)
+        total_loss += loss.item()
+        batch +=1
+    valid_loss = total_loss/batch
     return valid_loss
 
 def test(args, model, dataloader, setting):
@@ -221,4 +281,20 @@ def test(args, model, dataloader, setting):
             y_hat = model(x)
             predicts.extend(y_hat.tolist())
         
+    return predicts
+
+def multi_test(args, model, context_dataloader, image_dataloader, text_dataloader, setting):
+    predicts = list()
+    if args.use_best_model == True:
+        model.load_state_dict(torch.load(f'./saved_models/{setting.save_time}_{args.model}_model.pt'))
+    else:
+        pass
+    model.eval()
+    for idx, (context_data, image_data, text_data) in enumerate(zip(context_dataloader['test_dataloader'],image_dataloader['test_dataloader'],text_dataloader['test_dataloader'])):
+        context_x = context_data[0].to(args.device), context_data[1].to(args.device)
+        image_x, _ = [image_data['user_isbn_vector'].to(args.device), image_data['img_vector'].to(args.device)], image_data['label'].to(args.device)
+        text_x, _ = [text_data['user_isbn_vector'].to(args.device), text_data['user_summary_merge_vector'].to(args.device), text_data['item_summary_vector'].to(args.device)], text_data['label'].to(args.device)
+            
+        y_hat = model(context_x, image_x, text_x)
+        predicts.extend(y_hat.tolist())
     return predicts

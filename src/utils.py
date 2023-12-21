@@ -135,6 +135,11 @@ class Logger:
 
     def __del__(self):
         self.close()
+
+def multi_load(args, context_data,image_data,text_data):
+    if args.model=='Multi':
+        model = Multi(args, context_data, image_data, text_data).to(args.device)
+    return model
         
 def models_load(args, data):
     '''
