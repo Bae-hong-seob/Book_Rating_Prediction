@@ -25,15 +25,10 @@
 ---
 
 - **Books.csv**
-    
-    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/5985c457-cd0e-4cff-af5e-5abdead5863f/Untitled.png)
-    
+<img width="557" alt="Untitled (2)" src="https://github.com/Bae-hong-seob/Book_Rating_Prediction/assets/49437396/52db4870-7bf4-4d0e-9f35-96eccc2b66f2">
 
 - **Users.csv**
-    
-    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/4323fe7b-80e7-44bd-a5b2-1fa81ce418d1/Untitled.png)
-    
+<img width="242" alt="Untitled (3)" src="https://github.com/Bae-hong-seob/Book_Rating_Prediction/assets/49437396/59a9603c-957c-4844-ba9a-356f3b66f1b9">
 
 - **Ratings.csv**
-    
-    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/bb31903c-2747-43cd-b212-282b87fe97cd/Untitled.png)
+<img width="224" alt="Untitled (4)" src="https://github.com/Bae-hong-seob/Book_Rating_Prediction/assets/49437396/8b70cd61-725f-469b-89ac-a35ad46f4208">
