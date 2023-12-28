@@ -21,3 +21,19 @@
 - rating data : 59803명의 사용자가 129,777개의 책에 대해 남긴 306,795개의 평점 데이터
 - book meta data : 149,570개의 책에 대한 정보를 담은 데이터
 - user meta data : 68,092명의 사용자에 대한 정보를 담은 데이터
+<img width="581" alt="Untitled (1)" src="https://github.com/Bae-hong-seob/Book_Rating_Prediction/assets/49437396/8cfa39eb-bfc6-4ef9-956a-0761a4ffcb5b">
+---
+
+- **Books.csv**
+    
+    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/5985c457-cd0e-4cff-af5e-5abdead5863f/Untitled.png)
+    
+
+- **Users.csv**
+    
+    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/4323fe7b-80e7-44bd-a5b2-1fa81ce418d1/Untitled.png)
+    
+
+- **Ratings.csv**
+    
+    ![Untitled](https://prod-files-secure.s3.us-west-2.amazonaws.com/df5d8430-24f0-483e-8c23-ec2ff447ccff/bb31903c-2747-43cd-b212-282b87fe97cd/Untitled.png)
