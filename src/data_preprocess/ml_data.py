@@ -220,4 +220,5 @@ def ml_data_split(args, data):
     data['X_train'], data['X_valid'], data['y_train'], data['y_valid'] = X_train, X_valid, y_train, y_valid
     print(f'train size : x,y: {X_train.shape},{y_train.shape}')
     print(f'valid size : x,y: {X_valid.shape},{y_valid.shape}')
+    print(X_train)
     return data
