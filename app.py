@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import argparse
-from streamlit.predict import load_model, get_prediction
+from predict import load_model, get_prediction
 
 def main(args):
     st.title('사용자 평점 예측')

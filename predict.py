@@ -1,14 +1,12 @@
 import os
 import gdown
-import torch
 import streamlit as st
 import yaml
-from transformers import AutoTokenizer
 import sys
 from src.models import *
 
 
-with open("streamlit_folder/config.yaml") as f:
+with open("config.yaml") as f:
     config = yaml.load(f, Loader=yaml.FullLoader)
 
 # 구글 드라이브를 이용한 모델 다운로드
