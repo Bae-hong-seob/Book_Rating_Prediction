@@ -32,3 +32,11 @@
 
 - **Ratings.csv**
 <img width="224" alt="Untitled (4)" src="https://github.com/Bae-hong-seob/Book_Rating_Prediction/assets/49437396/8b70cd61-725f-469b-89ac-a35ad46f4208">
+
+## 프로젝트  팀 구성 및 역할
+
+1. 김진용 : EDA, TabNet 구현
+2. 박치언 : AutoInt, DeepFM 모델링 및 구현
+3. 배홍섭 : Team Leader, Multi-Modal 구현
+4. 안제준 : DeepCoNN 모델링 및 구현
+5. 윤도현 : CNN_FM, FM 모델링 및 구현
