@@ -44,14 +44,12 @@ class AutoInt(nn.Module):
         self.embedding = FeaturesEmbedding(self.field_dims, args.embed_dim)
         self.transformer_block = TransformerBlock(args.embed_dim, args.num_heads, args.num_layers)
         self.prediction_layer = PredictionLayer(args.embed_dim, args.dropout)
-        self.i = 0
 
     def forward(self, x):
         embed = self.embedding(x)
         out = self.transformer_block(embed)
         out = torch.sum(out, dim=1)
         _out = self.prediction_layer(out)
-        self.i += 1
         
         return _out.squeeze(1), out
     
